@@ -12,7 +12,7 @@ class Objective(BaseObjective):
     name = "Ordinary Least Squares"
 
     # URL of the main repo for this benchmark.
-    url = "https://github.com/#ORG/#BENCHMARK_NAME"
+    url = "https://github.com/Etyl/benchmark_distributed_linreg"
 
     # List of packages needed to run the benchmark.
     # They are installed with conda; to use pip, use 'pip:packagename'. To
