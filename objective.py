@@ -34,7 +34,7 @@ class Objective(BaseObjective):
         return {
             "value": train_loss,
             **{
-                k: np.mean(v)
+                k: np.sum(v)
                 for k, v in logs.items()
             }
         }

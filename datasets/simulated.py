@@ -8,12 +8,12 @@ class Dataset(BaseDataset):
     name = "Simulated"
 
     parameters = {
-        'n': [1024],
-        'd1': [200],
-        'd2': [200],
+        'n': [16*1024],
+        'd1': [800],
+        'd2': [800],
         'iid': [True, False],
         'n_blocks': [16],
-        'noise': [0.1],
+        'noise': [1.],
     }
     requirements = ["numpy"]
 
@@ -36,7 +36,6 @@ class Dataset(BaseDataset):
         n_per_block = self.n // self.n_blocks
 
         W_linear = rng.randn(self.d1, self.d2)
-        W_quad = rng.randn(self.d1, self.d2)
 
         X_blocks = []
         Y_blocks = []
@@ -49,7 +48,6 @@ class Dataset(BaseDataset):
             # Multivariate quadratic regression
             Yb = (
                 Xb @ (W_linear + rng.randn(self.d1, self.d2) * 0.1)
-                + (Xb ** 2) @ (W_quad + rng.randn(self.d1, self.d2) * 0.1)
                 + self.noise * rng.randn(n_per_block, self.d2)
             )
 

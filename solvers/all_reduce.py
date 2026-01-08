@@ -57,11 +57,12 @@ class Solver(DistributedMPISolver):
         W = rng.randn(d1, d2)
         G_global = np.zeros_like(W)
 
-        for _ in range(n_iter):
+        for k in range(n_iter):
             # Sampling
-            indices = np.random.randint(0, len(x_local), (args.batch_size,))
-            x_batch = x_local[indices]
-            y_batch = y_local[indices]
+            start_idx = ((k+1) * args.batch_size) % x_local.shape[0]
+            start_idx = start_idx - args.batch_size
+            x_batch = x_local[start_idx:start_idx + args.batch_size]
+            y_batch = y_local[start_idx:start_idx + args.batch_size]
 
             # Local Computation
             t_start = time.perf_counter()
