@@ -15,3 +15,8 @@ benchopt.ini
 
 .DS_Store
 coverage.xml
+*.out
+*.log
+*.txt
+
+data/

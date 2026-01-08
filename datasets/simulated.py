@@ -1,38 +1,71 @@
 from benchopt import BaseDataset
-
+from benchmark_utils import get_data_path
 import numpy as np
+import os
 
 
-# All datasets must be named `Dataset` and inherit from `BaseDataset`
 class Dataset(BaseDataset):
-
-    # Name to select the dataset in the CLI and to display the results.
     name = "Simulated"
 
-    # List of parameters to generate the datasets. The benchmark will consider
-    # the cross product for each key in the dictionary.
-    # Any parameters 'param' defined here is available as `self.param`.
     parameters = {
-        'n_samples, n_features': [
-            (1000, 500),
-            (5000, 200),
-        ],
-        'random_state': [27],
+        'n': [1024],
+        'd1': [200],
+        'd2': [200],
+        'iid': [True, False],
+        'n_blocks': [16],
+        'noise': [0.1],
     }
-
-    # List of packages needed to run the dataset. See the corresponding
-    # section in objective.py. This is an optional attribute.
-    requirements = []
+    requirements = ["numpy"]
 
     def get_data(self):
-        # The return arguments of this function are passed as keyword arguments
-        # to `Objective.set_data`. This defines the benchmark's
-        # API to pass data. It is customizable for each benchmark.
+        data_dir = get_data_path("simulated")
+        os.makedirs(data_dir, exist_ok=True)
+        param_string = "_".join(
+            [f"{k}-{getattr(self, k)}" for k in self.parameters]
+        )
+        X_name = f"X_{param_string}.npy"
+        x_path = os.path.join(data_dir, X_name)
+        Y_name = f"Y_{param_string}.npy"
+        y_path = os.path.join(data_dir, Y_name)
 
-        # Generate pseudorandom data using `numpy`.
-        rng = np.random.RandomState(self.random_state)
-        X = rng.randn(self.n_samples, self.n_features)
-        y = rng.randn(self.n_samples)
+        if os.path.exists(x_path) and os.path.exists(y_path):
+            return dict(x_path=x_path, y_path=y_path)
 
-        # The dictionary defines the keyword arguments for `Objective.set_data`
-        return dict(X=X, y=y)
+        rng = np.random.RandomState(42)
+
+        n_per_block = self.n // self.n_blocks
+
+        W_linear = rng.randn(self.d1, self.d2)
+        W_quad = rng.randn(self.d1, self.d2)
+
+        X_blocks = []
+        Y_blocks = []
+
+        for _ in range(self.n_blocks):
+            # Different distribution per block
+            mean_shift = rng.randn(self.d1) * 2.0
+            Xb = rng.randn(n_per_block, self.d1) + mean_shift
+
+            # Multivariate quadratic regression
+            Yb = (
+                Xb @ (W_linear + rng.randn(self.d1, self.d2) * 0.1)
+                + (Xb ** 2) @ (W_quad + rng.randn(self.d1, self.d2) * 0.1)
+                + self.noise * rng.randn(n_per_block, self.d2)
+            )
+
+            X_blocks.append(Xb)
+            Y_blocks.append(Yb)
+
+        X = np.vstack(X_blocks)
+        Y = np.vstack(Y_blocks)
+
+        # IID version = shuffle samples
+        if self.iid:
+            perm = rng.permutation(self.n)
+            X = X[perm]
+            Y = Y[perm]
+
+        np.save(x_path, X)
+        np.save(y_path, Y)
+
+        return dict(x_path=x_path, y_path=y_path)
