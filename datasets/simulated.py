@@ -9,8 +9,8 @@ class Dataset(BaseDataset):
 
     parameters = {
         'n': [16*1024],
-        'd1': [800],
-        'd2': [800],
+        'd1': [2000],
+        'd2': [2000],
         'iid': [True, False],
         'n_blocks': [16],
         'noise': [1.],

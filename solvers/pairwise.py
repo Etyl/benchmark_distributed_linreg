@@ -9,13 +9,14 @@ from benchmark_utils.mpi_solver import DistributedMPISolver
 
 
 class Solver(DistributedMPISolver):
-    name = "all-reduce"
+    name = "pairwise"
 
     parameters = {
         "n_workers": [1, 4, 16],
         "batch_size": [4, 32],
         "lr": [1e-3],
-        "moments": [True, False]
+        "mixing": [0.5],
+        "moments": [False]
     }
 
     requirements = ["numpy", "mpi4py"]
@@ -27,8 +28,8 @@ class Solver(DistributedMPISolver):
     @classmethod
     def init_worker(cls, args, comm, rank, world_size):
         """
-        Initialize the worker environment, clear logs, and load data.
-        Returns the local data tensor (X_local).
+        Initialize the worker environment and load data.
+        Identical to the base implementation.
         """
         x = open_memmap(args.x_path)
         y = open_memmap(args.y_path)
@@ -53,52 +54,44 @@ class Solver(DistributedMPISolver):
         logs = defaultdict(list)
 
         # Re-init weights for every run
-        rng = np.random.RandomState(0)
+        rng = np.random.RandomState(42)
         W = rng.randn(d1, d2)
-        G_global = np.zeros_like(W)
-
-        # Adam Parameters and State initialization
-        beta1 = 0.9
-        beta2 = 0.999
-        epsilon = 1e-8
-        m = np.zeros_like(W)  # First moment vector
-        v = np.zeros_like(W)  # Second moment vector
+        W_neighbor = np.zeros_like(W)
 
         for k in range(n_iter):
-            # Sampling
             start_idx = ((k+1) * args.batch_size) % x_local.shape[0]
             start_idx = start_idx - args.batch_size
+
             x_batch = x_local[start_idx:start_idx + args.batch_size]
             y_batch = y_local[start_idx:start_idx + args.batch_size]
 
-            # Local Computation
+            # Local Computation (Gradient Step)
             t_start = time.perf_counter()
             y_pred = x_batch @ W
             dW = (-2/args.batch_size) * x_batch.T @ (y_batch - y_pred)
             logs['compute_time'].append(time.perf_counter() - t_start)
 
-            # Communication
+            # Update local model with local gradient immediately
             t_start = time.perf_counter()
-            comm.Allreduce(dW, G_global, op=MPI.SUM)
-            G_global /= world_size
-            logs['comm_time'].append(time.perf_counter() - t_start)
-
-            # Global Update
-            t_start = time.perf_counter()
-
-            if args.moments:
-                t = k + 1
-                m = beta1 * m + (1 - beta1) * G_global
-                v = beta2 * v + (1 - beta2) * (G_global ** 2)
-
-                m_hat = m / (1 - beta1 ** t)
-                v_hat = v / (1 - beta2 ** t)
-
-                W -= args.lr * m_hat / (np.sqrt(v_hat) + epsilon)
-            else:
-                W -= G_global * args.lr
-
+            W -= args.lr * dW
             logs['update_time'].append(time.perf_counter() - t_start)
+
+            if world_size > 1:
+                # Sparse Communication (Gossip)
+                t_start = time.perf_counter()
+                # Shift changes every iteration 'k'
+                shift = k if (k % world_size) != 0 else k+1
+                dest_rank = (rank + shift) % world_size
+
+                req = comm.Isend(W, dest=dest_rank, tag=k)
+                comm.Recv(W_neighbor, source=MPI.ANY_SOURCE, tag=k)
+                req.Wait()
+                logs['comm_time'].append(time.perf_counter() - t_start)
+
+                # Global Update
+                t_start = time.perf_counter()
+                W = (1 - args.mixing) * W + args.mixing * W_neighbor
+                logs['update_time'][-1] += time.perf_counter() - t_start
 
         return dict(W=W, logs=dict(logs))
 
