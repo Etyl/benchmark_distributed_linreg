@@ -1,35 +1,29 @@
 dataset:
   simulated:
     n: [16384]
-    d1: [400]
-    d2: [400]
+    d1: [2000]
+    d2: [2000]
     iid: [true, false]
     n_blocks: [16]
-    noise: [0.1]
+    noise: [0.]
 
 solver:
   all-reduce:
     n_workers: [16]
-    batch_size: [4, 32]
-    lr: [1e-3]
+    batch_size: [32]
+    lr: [1e-2]
     moments: [false]
-  ef21:
-    n_workers: [16]
-    batch_size: [4, 32]
-    lr: [1e-3]
-    compressor: ["top-1", "top-10"]
   pairwise:
     n_workers: [16]
-    batch_size: [4, 32]
-    lr: [1e-3]
+    batch_size: [32]
+    lr: [1e-2]
     moments: [false]
   local:
     n_workers: [16]
-    batch_size: [4, 32]
-    lr: [1e-3]
+    batch_size: [32]
+    lr: [1e-2]
     merge_every: [1]
     moments: [false]
 
-
 n_repetitions: 1
-timeout: 400
+timeout: 60

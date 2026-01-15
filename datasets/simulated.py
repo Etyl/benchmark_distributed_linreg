@@ -5,15 +5,15 @@ import os
 
 
 class Dataset(BaseDataset):
-    name = "Simulated"
+    name = "simulated"
 
     parameters = {
         'n': [16*1024],
-        'd1': [2000],
-        'd2': [2000],
+        'd1': [400],
+        'd2': [400],
         'iid': [True, False],
         'n_blocks': [16],
-        'noise': [1.],
+        'noise': [0.1],
     }
     requirements = ["numpy"]
 
@@ -47,7 +47,7 @@ class Dataset(BaseDataset):
 
             # Multivariate quadratic regression
             Yb = (
-                Xb @ (W_linear + rng.randn(self.d1, self.d2) * 0.1)
+                Xb @ W_linear
                 + self.noise * rng.randn(n_per_block, self.d2)
             )
 

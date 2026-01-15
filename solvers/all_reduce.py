@@ -12,8 +12,8 @@ class Solver(DistributedMPISolver):
     name = "all-reduce"
 
     parameters = {
-        "n_workers": [1, 4, 16],
-        "batch_size": [4, 32],
+        "n_workers": [1, 16],
+        "batch_size": [32],
         "lr": [1e-3],
         "moments": [True, False]
     }
@@ -55,7 +55,6 @@ class Solver(DistributedMPISolver):
         # Re-init weights for every run
         rng = np.random.RandomState(0)
         W = rng.randn(d1, d2)
-        G_global = np.zeros_like(W)
 
         # Adam Parameters and State initialization
         beta1 = 0.9
@@ -79,8 +78,8 @@ class Solver(DistributedMPISolver):
 
             # Communication
             t_start = time.perf_counter()
-            comm.Allreduce(dW, G_global, op=MPI.SUM)
-            G_global /= world_size
+            comm.Allreduce(MPI.IN_PLACE, dW, op=MPI.SUM)
+            dW /= world_size
             logs['comm_time'].append(time.perf_counter() - t_start)
 
             # Global Update
@@ -88,15 +87,15 @@ class Solver(DistributedMPISolver):
 
             if args.moments:
                 t = k + 1
-                m = beta1 * m + (1 - beta1) * G_global
-                v = beta2 * v + (1 - beta2) * (G_global ** 2)
+                m = beta1 * m + (1 - beta1) * dW
+                v = beta2 * v + (1 - beta2) * (dW ** 2)
 
                 m_hat = m / (1 - beta1 ** t)
                 v_hat = v / (1 - beta2 ** t)
 
                 W -= args.lr * m_hat / (np.sqrt(v_hat) + epsilon)
             else:
-                W -= G_global * args.lr
+                W -= dW * args.lr
 
             logs['update_time'].append(time.perf_counter() - t_start)
 
