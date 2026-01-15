@@ -3,8 +3,8 @@
 ![Build Status](https://github.com/Etyl/benchmark_distributed_linreg/actions/workflows/main.yml/badge.svg)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
-This benchmark is dedicated to **distributed optimization algorithms**.
-The simulated dataset corresponds to a **linear regression problem** distributed across multiple workers.
+This benchmark is dedicated to distributed optimization algorithms.
+The simulated dataset corresponds to a linear regression problem distributed across multiple workers.
 
 The optimization problem is
 
@@ -19,7 +19,7 @@ where:
 * $W$ is the weight matrix.
 
 The dataset is split across multiple workers, each worker having access to a subset of samples.
-The data can be **heterogeneously distributed** across workers, where each local dataset $X_i$
+The data can be heterogeneously distributed across workers, where each local dataset $X_i$
 is sampled from an offset Gaussian distribution.
 
 
