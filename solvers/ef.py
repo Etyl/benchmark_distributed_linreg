@@ -9,7 +9,7 @@ from benchmark_utils.compressors import TopK, PowerSGD
 
 
 class Solver(DistributedMPISolver):
-    name = "ef21"
+    name = "ef"
 
     parameters = {
         "n_workers": [1, 16],
@@ -52,6 +52,7 @@ class Solver(DistributedMPISolver):
         rng = np.random.RandomState(0)
         W = rng.randn(d1, d2)
         g = np.zeros((d1, d2))
+        error = np.zeros((d1, d2))
 
         compressor_name = args.compressor.split('-')[0]
         k = int(args.compressor.split('-')[1])
@@ -75,12 +76,16 @@ class Solver(DistributedMPISolver):
             grad_local = (-2/args.batch_size) * x_batch.T @ (y_batch - y_pred)
 
             # Error Feedback: Compress the difference
-            diff = grad_local - g
+            grad_local = grad_local + error
             logs['compute_time'].append(time.perf_counter() - t_start)
 
             # Communication
             t_start = time.perf_counter()
-            compressor.communicate(diff)
+            g_compressed = compressor.communicate(
+                grad_local,
+                return_compressed=True
+            )
+            error = grad_local - g_compressed
             logs['comm_time'].append(time.perf_counter() - t_start)
 
             # Global Update

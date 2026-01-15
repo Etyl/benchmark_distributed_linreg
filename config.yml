@@ -17,7 +17,12 @@ solver:
     n_workers: [16]
     batch_size: [4, 32]
     lr: [1e-3]
-    compressor: ["top-1", "top-10"]
+    compressor: ["top-1", "top-10", "power-1", "power-10"]
+  ef:
+    n_workers: [16]
+    batch_size: [4, 32]
+    lr: [1e-3]
+    compressor: ["top-1", "top-10", "power-1", "power-10"]
   pairwise:
     n_workers: [16]
     batch_size: [4, 32]
