@@ -7,11 +7,11 @@ This benchmark is dedicated to distributed optimizers.
 The simulated dataset is a linear regression problem distributed over multiple workers.
 
 $$
-\min_{W} || W X - Y ||^2,
+\min_{W} \lVert W X - Y \rVert^2
 $$
 
-where ($X$) is the matrix of data, ($Y$) is the target matrix, and
-($W$) is the weight matrix.
+where $X$ is the matrix of data, $Y$ is the target matrix, and
+$W$ is the weight matrix.
 
 The data is split across multiple workers, each worker having access to a subset of samples.
 These samples can be heterogeneously distributed across workers, where each ($X_i$) is sampled
