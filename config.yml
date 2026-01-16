@@ -40,6 +40,11 @@ solver:
     lr: [1e-3]
     merge_every: [4]
     slow_momentum: [0.6]
+  adaslowmo:
+    n_workers: [16]
+    batch_size: [4, 32]
+    lr: [1e-3]
+    merge_every: [4]
 
 
 n_repetitions: 1
