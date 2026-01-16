@@ -10,6 +10,7 @@ from benchmark_utils.mpi_solver import DistributedMPISolver
 # Implementation of SlowMo
 # https://arxiv.org/pdf/1910.00643
 
+
 class Solver(DistributedMPISolver):
     name = "slowmo"
 

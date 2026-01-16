@@ -9,7 +9,7 @@ from benchmark_utils.mpi_solver import DistributedMPISolver
 
 
 class Solver(DistributedMPISolver):
-    name = "slowmo"
+    name = "adaslowmo"
 
     parameters = {
         "n_workers": [1, 4, 16],
@@ -90,7 +90,7 @@ class Solver(DistributedMPISolver):
             ):
                 comm.Allreduce(MPI.IN_PLACE, W, op=MPI.SUM)
                 W /= world_size
-                dW = W - W0    
+                dW = W - W0
                 t = k + 1
                 m = beta1 * m + (1 - beta1) * dW
                 v = beta2 * v + (1 - beta2) * (dW ** 2)

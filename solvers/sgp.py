@@ -10,6 +10,7 @@ from benchmark_utils.mpi_solver import DistributedMPISolver
 # Implementation of Stochastic Gradient Push (SGP)
 # https://arxiv.org/pdf/1811.10792
 
+
 class Solver(DistributedMPISolver):
     name = "sgp"
 
@@ -30,7 +31,7 @@ class Solver(DistributedMPISolver):
     def init_worker(cls, args, comm, rank, world_size):
         x = open_memmap(args.x_path)
         y = open_memmap(args.y_path)
-        
+
         n_samples = x.shape[0]
         samples_per_worker = n_samples // world_size
 
@@ -46,7 +47,7 @@ class Solver(DistributedMPISolver):
         logs = defaultdict(list)
 
         rng = np.random.RandomState(0)
-        
+
         # SGP State
         W = rng.randn(d1, d2)
         ps_weight = 1.0  # Scalar Push-Sum weight
@@ -54,11 +55,6 @@ class Solver(DistributedMPISolver):
         # Requests handles for non-blocking communication
         req_send = None
         req_recv = None
-        
-        # Buffer to hold incoming (W, w) from neighbor
-        # We initialize it with zeros; size must match payload
-        # Note: python MPI will handle object pickling, so we wait on the object.
-        incoming_msg = None
 
         for k in range(n_iter):
             start_idx = ((k+1) * args.batch_size) % x_local.shape[0]
@@ -67,13 +63,13 @@ class Solver(DistributedMPISolver):
 
             # --- 1. Compute Gradient (Always happens) ---
             t_start = time.perf_counter()
-            
+
             # De-bias model for computation: W_model = W / ps_weight
             W_model = W / ps_weight
-            
+
             y_pred = x_batch @ W_model
             grads = (-2/args.batch_size) * x_batch.T @ (y_batch - y_pred)
-            
+
             logs['compute_time'].append(time.perf_counter() - t_start)
 
             # --- 2. Local Update ---
@@ -94,14 +90,17 @@ class Solver(DistributedMPISolver):
                     # Prepare Payload
                     to_send_W = W * 0.5
                     to_send_w = ps_weight * 0.5
-                    
+
                     # Update local mass immediately
                     W *= 0.5
                     ps_weight *= 0.5
                     # Blocking Send/Recv
                     comm.send((to_send_W, to_send_w), dest=dest_rank, tag=k)
-                    W_neighbor, w_neighbor = comm.recv(source=MPI.ANY_SOURCE, tag=k)
-                    
+                    W_neighbor, w_neighbor = comm.recv(
+                        source=MPI.ANY_SOURCE,
+                        tag=k
+                    )
+
                     # Aggregate
                     W += W_neighbor
                     ps_weight += w_neighbor
@@ -116,12 +115,12 @@ class Solver(DistributedMPISolver):
                         if req_recv is not None:
                             # Wait for data from tau iterations ago
                             W_neighbor, w_neighbor = req_recv.wait()
-                            req_send.wait() # Ensure send is also done
-                            
+                            req_send.wait()  # Ensure send is also done
+
                             # Aggregate (Late Mixing)
                             W += W_neighbor
                             ps_weight += w_neighbor
-                            
+
                             req_recv = None
                             req_send = None
 
@@ -129,16 +128,20 @@ class Solver(DistributedMPISolver):
                         shift = k if (k % world_size) != 0 else k+1
                         dest_rank = (rank + shift) % world_size
 
-                        # Prepare Payload (MUST COPY to avoid buffer modification race)
+                        # Prepare Payload
                         to_send_W = (W * 0.5).copy()
                         to_send_w = ps_weight * 0.5
-                        
+
                         # Update local mass
                         W *= 0.5
                         ps_weight *= 0.5
 
                         # Non-blocking Start
-                        req_send = comm.isend((to_send_W, to_send_w), dest=dest_rank, tag=k)
+                        req_send = comm.isend(
+                            (to_send_W, to_send_w),
+                            dest=dest_rank,
+                            tag=k
+                        )
                         req_recv = comm.irecv(source=MPI.ANY_SOURCE, tag=k)
 
             logs['comm_time'].append(time.perf_counter() - t_start)

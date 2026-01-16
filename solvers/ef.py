@@ -9,6 +9,7 @@ from benchmark_utils.compressors import TopK, PowerSGD
 
 # Implementation of Error Feedback (EF)
 
+
 class Solver(DistributedMPISolver):
     name = "ef"
 
