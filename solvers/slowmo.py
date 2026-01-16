@@ -9,14 +9,14 @@ from benchmark_utils.mpi_solver import DistributedMPISolver
 
 
 class Solver(DistributedMPISolver):
-    name = "local"
+    name = "slowmo"
 
     parameters = {
         "n_workers": [1, 4, 16],
         "batch_size": [32],
-        "merge_every": [1],
+        "merge_every": [4],
         "lr": [1e-3],
-        "moments": [True, False]
+        "slow_momentum": [0.6],
     }
 
     requirements = ["numpy", "mpi4py"]
@@ -55,14 +55,9 @@ class Solver(DistributedMPISolver):
 
         # Re-init weights for every run
         rng = np.random.RandomState(0)
-        W = rng.randn(d1, d2)
-
-        # Adam Parameters and State initialization
-        beta1 = 0.9
-        beta2 = 0.999
-        epsilon = 1e-8
-        m = np.zeros_like(W)  # First moment vector
-        v = np.zeros_like(W)  # Second moment vector
+        W0 = rng.randn(d1, d2)
+        W = W0.copy()
+        u = np.zeros_like(W0)  # Slow momentum
 
         for k in range(n_iter):
             # Sampling
@@ -79,17 +74,7 @@ class Solver(DistributedMPISolver):
 
             # Update
             t_start = time.perf_counter()
-            if args.moments:
-                t = k + 1
-                m = beta1 * m + (1 - beta1) * dW
-                v = beta2 * v + (1 - beta2) * (dW ** 2)
-
-                m_hat = m / (1 - beta1 ** t)
-                v_hat = v / (1 - beta2 ** t)
-
-                W -= args.lr * m_hat / (np.sqrt(v_hat) + epsilon)
-            else:
-                W -= dW * args.lr
+            W -= dW * args.lr
             logs['update_time'].append(time.perf_counter() - t_start)
 
             # Communication
@@ -100,6 +85,9 @@ class Solver(DistributedMPISolver):
             ):
                 comm.Allreduce(MPI.IN_PLACE, W, op=MPI.SUM)
                 W /= world_size
+                u = u * args.slow_momentum + (W - W0) * (1 / args.lr)
+                W0 += args.lr * u
+                W = W0.copy()
             logs['comm_time'].append(time.perf_counter() - t_start)
 
         return dict(W=W, logs=dict(logs))

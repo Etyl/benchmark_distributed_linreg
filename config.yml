@@ -12,7 +12,7 @@ solver:
     n_workers: [16]
     batch_size: [4, 32]
     lr: [1e-3]
-    moments: [false]
+    moments: [false, true]
   ef21:
     n_workers: [16]
     batch_size: [4, 32]
@@ -33,7 +33,13 @@ solver:
     batch_size: [4, 32]
     lr: [1e-3]
     merge_every: [1]
-    moments: [false]
+    moments: [false, true]
+  slowmo:
+    n_workers: [16]
+    batch_size: [4, 32]
+    lr: [1e-3]
+    merge_every: [4]
+    slow_momentum: [0.6]
 
 
 n_repetitions: 1
