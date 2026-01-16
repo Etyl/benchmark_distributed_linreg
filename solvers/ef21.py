@@ -7,6 +7,8 @@ from numpy.lib.format import open_memmap
 from benchmark_utils.mpi_solver import DistributedMPISolver
 from benchmark_utils.compressors import TopK, PowerSGD
 
+# Implementation of Error Feedback 21 (EF21)
+# https://arxiv.org/pdf/2106.05203
 
 class Solver(DistributedMPISolver):
     name = "ef21"

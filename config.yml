@@ -28,6 +28,11 @@ solver:
     batch_size: [4, 32]
     lr: [1e-3]
     moments: [false]
+  sgp:
+    n_workers: [16]
+    batch_size: [4, 32]
+    lr: [1e-3]
+    overlap: [0, 1]
   local:
     n_workers: [16]
     batch_size: [4, 32]
